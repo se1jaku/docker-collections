@@ -18,7 +18,7 @@ fi
 # Choose and run the correct binary
 BIN="rel_nodeclient"
 WORK_DIR="/opt/nodeclient"
-if [[ "$ARCH" == "x86_64" && "$USE_AVX2" == true ]]; then
+if [[ "$ARCH" == "x86_64" && "$AVX2_SUPPORTED" == true ]]; then
     echo "[entrypoint] Running AVX2-optimized binary"
     WORK_DIR="/opt/nodeclientv3"
 fi

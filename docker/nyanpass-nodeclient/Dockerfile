@@ -6,7 +6,8 @@ ARG DOWNLOAD_HOST="https://dl.nyafw.com"
 ARG DOWNLOAD_PREFIX="/download/"
 
 RUN apk upgrade --no-cache && \
-    apk add --no-cache bash tzdata ca-certificates wget curl
+    apk add --no-cache bash tzdata ca-certificates wget curl && \
+    mkdir -p /root/.config
 
 # download
 RUN mkdir -p /opt/nodeclient && cd /opt/nodeclient && \

@@ -1,12 +1,24 @@
 #!/bin/bash
 
-set -eu
+set -euo pipefail
 
-# Detect architecture
+FIRST_RUN="/root/.firstrun"
 ARCH=$(uname -m)
-echo "[entrypoint] Detected architecture: $ARCH"
+
+# first run
+if [ ! -f "${FIRST_RUN}" ]; then
+    # ipv4 precedence
+    if [ "${IPV4_PRECEDENCE}" = "1" ]; then
+        echo "[entrypoint] Setting IPv4 precedence"
+        echo "precedence ::ffff:0:0/96  100" >> /etc/gai.conf
+    fi
+
+    # touch
+    touch ${FIRST_RUN}
+fi
 
 # Check for AVX2 support
+echo "[entrypoint] Detected architecture: $ARCH"
 if [[ "$(awk -F ':' '/flags/{print $2; exit}' /proc/cpuinfo)" =~ avx2 ]]; then
     echo "[entrypoint] AVX2 support detected"
     AVX2_SUPPORTED=true

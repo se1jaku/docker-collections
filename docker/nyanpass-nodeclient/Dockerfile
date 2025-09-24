@@ -26,4 +26,6 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
 
 COPY entrypoint.sh /usr/local/bin/
 
+ENV IPV4_PRECEDENCE=1
+
 ENTRYPOINT ["entrypoint.sh"]

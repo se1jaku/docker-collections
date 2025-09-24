@@ -1,12 +1,13 @@
-FROM alpine:latest
+FROM debian:13.0
 
 ARG TARGETARCH
 
 ARG DOWNLOAD_HOST="https://dl.nyafw.com"
 ARG DOWNLOAD_PREFIX="/download/"
 
-RUN apk upgrade --no-cache && \
-    apk add --no-cache bash tzdata ca-certificates wget curl && \
+RUN apt-get update && \
+    apt-get install -y tzdata ca-certificates wget curl && \
+    apt-get clean && \
     mkdir -p /root/.config
 
 # download

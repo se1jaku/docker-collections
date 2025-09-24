@@ -1,10 +1,31 @@
 name: Docker CI for nyanpass-nodeclient
 
+env:
+  IMAGE_NAME: nyanpass-nodeclient
+  DOCKERFILE_DIR: nyanpass-nodeclient
+
 on:
+  push:
+    branches: ["master"]
+    paths:
+      - "docker/nyanpass-nodeclient/**"
+
+  pull_request:
+    branches: ["master"]
+    paths:
+      - "docker/nyanpass-nodeclient/**"
+
+  schedule:
+    - cron: "0 14 * * *"
+
   workflow_dispatch:
     inputs:
       tag:
         description: "The tag version you want to build"
+        required: false
+        default: "latest"
+        type: string
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -16,6 +37,43 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Generate image tag
+        id: tagger
+        run: |
+          LATEST_VERSION=$(./.github/scripts/get-nodeclient-version.sh)
+          INPUT_TAG="${{ inputs.tag }}"
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && "${INPUT_TAG}" != "latest" ]]; then
+            TAGS="type=raw,value=${INPUT_TAG}"
+          else
+            TAGS="type=raw,value=latest\ntype=raw,value=${LATEST_VERSION}"
+          fi
+
+          echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+
+          echo 'computed_tags<<EOF' >> $GITHUB_OUTPUT
+          echo -e "$TAGS" >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+
+      - name: Log latest version
+        run: echo "Latest version is ${{ steps.tagger.outputs.latest_version }}"
+      - name: Check if image already exists
+        id: check
+        run: |
+          TAG=${{ steps.tagger.outputs.latest_version }}
+          IMAGE="ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:$TAG"
+
+          echo "Checking $IMAGE ..."
+          if docker manifest inspect "$IMAGE" > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Stop job if image exists
+        if: steps.check.outputs.exists == 'true'
+        run: |
+          echo "Image already exists. Skipping build."
+          exit 0
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -30,12 +88,13 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/se1jaku/nyanpass-nodeclient
+          images: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tags: ${{ steps.tagger.outputs.computed_tags }}
       - name: Build and push Docker images
         uses: docker/build-push-action@v6
         with:
           platforms: linux/amd64,linux/arm64
-          context: ./docker/nyanpass-nodeclient
-          tags: ghcr.io/se1jaku/nyanpass-nodeclient:latest
+          context: ./docker/${{ env.DOCKERFILE_DIR }}
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          push: true
+          push: ${{ github.actor != 'dependabot[bot]' }}

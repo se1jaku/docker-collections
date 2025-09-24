@@ -3,6 +3,8 @@
 set -euo pipefail
 
 FIRST_RUN="/root/.firstrun"
+WORK_DIR="/opt/nodeclient"
+BIN="rel_nodeclient"
 ARCH=$(uname -m)
 
 # first run
@@ -27,9 +29,7 @@ else
     AVX2_SUPPORTED=false
 fi
 
-# Choose and run the correct binary
-BIN="rel_nodeclient"
-WORK_DIR="/opt/nodeclient"
+# Choose and run the binary
 if [[ "$ARCH" == "x86_64" && "$AVX2_SUPPORTED" == true ]]; then
     echo "[entrypoint] Running AVX2-optimized binary"
     WORK_DIR="/opt/nodeclientv3"

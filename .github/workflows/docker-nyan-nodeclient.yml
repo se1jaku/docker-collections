@@ -6,12 +6,12 @@ env:
 
 on:
   push:
-    branches: ["master"]
+    branches: ["main"]
     paths:
       - "docker/nyanpass-nodeclient/**"
 
   pull_request:
-    branches: ["master"]
+    branches: ["main"]
     paths:
       - "docker/nyanpass-nodeclient/**"
 

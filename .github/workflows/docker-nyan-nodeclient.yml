@@ -70,7 +70,7 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
       - name: Stop job if image exists
-        if: steps.check.outputs.exists == 'true'
+        if: steps.check.outputs.exists == 'true' && github.event_name != 'workflow_dispatch'
         run: |
           echo "Image already exists. Skipping build."
           exit 0

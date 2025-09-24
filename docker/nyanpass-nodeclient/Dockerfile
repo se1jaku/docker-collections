@@ -1,5 +1,7 @@
 FROM debian:13.1
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 ARG TARGETARCH
 
 ARG DOWNLOAD_HOST="https://dl.nyafw.com"

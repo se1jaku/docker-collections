@@ -1,4 +1,4 @@
-FROM debian:13.1
+FROM debian:12.12
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -8,7 +8,7 @@ ARG DOWNLOAD_HOST="https://dl.nyafw.com"
 ARG DOWNLOAD_PREFIX="/download/"
 
 RUN apt-get update && \
-    apt-get install -y tzdata ca-certificates wget curl && \
+    apt-get install -y tzdata ca-certificates iputils-ping wget curl && \
     apt-get clean && \
     mkdir -p /root/.config
 

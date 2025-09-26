@@ -9,12 +9,6 @@ ARCH=$(uname -m)
 
 # first run
 if [ ! -f "${FIRST_RUN}" ]; then
-    # ipv4 precedence
-    if [ "${IPV4_PRECEDENCE}" = "1" ]; then
-        echo "[entrypoint] Setting IPv4 precedence"
-        echo "precedence ::ffff:0:0/96  100" >> /etc/gai.conf
-    fi
-
     # touch
     touch ${FIRST_RUN}
 fi

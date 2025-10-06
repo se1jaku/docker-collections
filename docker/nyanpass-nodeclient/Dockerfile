@@ -9,8 +9,7 @@ ARG DOWNLOAD_PREFIX="/download/"
 
 RUN apt-get update && \
     apt-get install -y tzdata ca-certificates iputils-ping wget curl && \
-    apt-get clean && \
-    mkdir -p /root/.config
+    apt-get clean
 
 # download
 RUN mkdir -p /opt/nodeclient && cd /opt/nodeclient && \

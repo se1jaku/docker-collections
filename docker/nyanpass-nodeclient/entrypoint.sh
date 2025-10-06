@@ -4,11 +4,17 @@ set -euo pipefail
 
 FIRST_RUN="/root/.firstrun"
 WORK_DIR="/opt/nodeclient"
+GAI_CONF_FILE="/etc/gai.conf"
 BIN="rel_nodeclient"
 ARCH=$(uname -m)
 
 # first run
 if [ ! -f "${FIRST_RUN}" ]; then
+    # gai.conf
+    if [ "${IPV4_PRECEDENCE}" = "1" ]; then
+        sed -i 's/^#\s*\(precedence\s\+::ffff:0:0\/96\s\+100\)/\1/' ${GAI_CONF_FILE}
+    fi
+
     # touch
     touch ${FIRST_RUN}
 fi

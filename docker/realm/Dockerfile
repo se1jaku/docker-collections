@@ -15,7 +15,7 @@ RUN apk upgrade --no-cache && \
     apk add --no-cache ca-certificates wget tar
 
 # download
-RUN RUN case "$TARGETARCH" in \
+RUN case "$TARGETARCH" in \
     amd64) ARCH_NAME="x86_64" ;; \
     arm64) ARCH_NAME="aarch64" ;; \
     arm) \

@@ -11,7 +11,11 @@ ARG DOWNLOAD_VERSION="latest"
 ARG DOWNLOAD_REPO="https://github.com/zhboner/realm"
 ARG DOWNLOAD_PREFIX="/releases/download/"
 
-RUN case "$TARGETARCH" in \
+RUN apk upgrade --no-cache && \
+    apk add --no-cache ca-certificates wget tar
+
+# download
+RUN RUN case "$TARGETARCH" in \
     amd64) ARCH_NAME="x86_64" ;; \
     arm64) ARCH_NAME="aarch64" ;; \
     arm) \
@@ -20,15 +24,10 @@ RUN case "$TARGETARCH" in \
     *)  ARCH_NAME="arm" ;; \
     esac ;; \
     *) ARCH_NAME="$TARGETARCH" ;; \
-    esac && echo "Building for $ARCH_NAME"
-
-RUN apk upgrade --no-cache && \
-    apk add --no-cache ca-certificates wget tar
-
-# download
-RUN mkdir -p /tmp && cd /tmp && \
+    esac && echo "Building for $ARCH_NAME" && \
+    mkdir -p /tmp && cd /tmp && \
     wget ${DOWNLOAD_REPO}${DOWNLOAD_PREFIX}${DOWNLOAD_VERSION}/realm-${ARCH_NAME}-unknown-linux-musl.tar.gz && \
-    tar -zxvf realm-${ARCH_NAME}-unknown-linux-musl.tar.gz && \
+    tar -zxvf ./realm-${ARCH_NAME}-unknown-linux-musl.tar.gz && \
     chmod +x ./realm && mv ./realm /usr/bin/
 
 FROM alpine:latest

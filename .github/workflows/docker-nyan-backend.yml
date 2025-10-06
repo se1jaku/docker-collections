@@ -89,8 +89,6 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
           tags: ${{ steps.tagger.outputs.computed_tags }}
-      - name: Create builder
-        run: docker buildx create --use --name mybuilder
       - name: Build and push Docker images
         uses: docker/build-push-action@v6
         with:

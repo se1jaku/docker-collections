@@ -11,8 +11,12 @@ ARCH=$(uname -m)
 # first run
 if [ ! -f "${FIRST_RUN}" ]; then
     # gai.conf
-    if [ "${IPV4_PRECEDENCE}" = "1" ]; then
-        sed -i 's/^#\s*\(precedence\s\+::ffff:0:0\/96\s\+100\)/\1/' ${GAI_CONF_FILE}
+    if [ -w "${GAI_CONF_FILE}" ]; then
+        if [ "${IPV4_PRECEDENCE}" = "1" ]; then
+            sed -i 's/^#\s*\(precedence\s\+::ffff:0:0\/96\s\+100\)/\1/' ${GAI_CONF_FILE}
+        fi
+    else
+        echo "[entrypoint] gai.conf is readonly, skipped"
     fi
 
     # touch

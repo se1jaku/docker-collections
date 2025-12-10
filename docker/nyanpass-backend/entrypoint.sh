@@ -6,7 +6,6 @@ FIRST_RUN="/root/.firstrun"
 WORK_DIR="/opt/backend"
 GAI_CONF_FILE="/etc/gai.conf"
 BIN="rel_backend"
-ARCH=$(uname -m)
 
 # first run
 if [ ! -f "${FIRST_RUN}" ]; then

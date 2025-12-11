@@ -22,3 +22,4 @@ COPY entrypoint.sh /usr/local/bin/
 ENV IPV4_PRECEDENCE=1
 
 ENTRYPOINT ["entrypoint.sh"]
+CMD ["-c", "/etc/nyanpass/config.yml"]

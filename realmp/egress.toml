@@ -1,0 +1,13 @@
+[log]
+level = "warn"
+output = "stdout"
+
+[network]
+no_tcp = false
+use_udp = false
+accept_mptcp = true
+
+# To landing, repeat this section to add more
+[[endpoints]]
+listen = "[::]:6666"
+remote = "ip.landing:7777"

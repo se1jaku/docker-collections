@@ -1,0 +1,13 @@
+[log]
+level = "warn"
+output = "stdout"
+
+[network]
+no_tcp = false
+use_udp = false
+send_mptcp = true
+
+# To IX, repeat this section to add more
+[[endpoints]]
+listen = "[::]:5555"
+remote = "ip.ix:6666"

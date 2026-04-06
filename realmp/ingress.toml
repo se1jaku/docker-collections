@@ -9,5 +9,5 @@ send_mptcp = true
 
 # To IX, repeat this section to add more
 [[endpoints]]
-listen = "[::]:5555"
+listen = "[::]:21000"
 remote = "ip.ix:6666"

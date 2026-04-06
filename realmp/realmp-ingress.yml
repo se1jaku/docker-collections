@@ -8,17 +8,15 @@ services:
       com.centurylinklabs.watchtower.enable: "true"
     restart: unless-stopped
     networks:
-      realmp-ep1:
-        ipv4_address: 192.168.1.10
-      realmp-ep2:
-        ipv4_address: 192.168.2.10
+      - realmp-ep1
+      - realmp-ep2
     cap_add:
       - NET_ADMIN
     environment:
       - MPTCP_DIRECTION=out
     ports:
       # NOTE: predefined port range for relay, make sure to update the config.toml accordingly
-      - 10101-10110:10101-10110
+      - 20000-21000:20000-21000
     volumes:
       - ${REALMP_CONFIG_DIR:-/etc/realmp}:/etc/realm
     command: -c /etc/realm/ingress.toml

@@ -13,7 +13,9 @@ get_ip() {
 }
 
 get_subnet() {
-  ip -o -4 addr show dev "$1" | awk '{print $4}'
+  ip route show dev "$1" proto kernel scope link \
+    | awk '{print $1}' \
+    | head -n1
 }
 
 get_nics() {

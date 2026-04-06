@@ -23,6 +23,12 @@ get_nics() {
     | sort -u
 }
 
+check_mptcp_support() {
+    ss -M &>/dev/null || {
+    log "mptcp not supported in this kernel, exiting"
+    }
+}
+
 # NOTE: gateway assumption: the gateway should be the .1 of the NIC's subnet
 get_gateway() {
   local ip="$1"
@@ -41,8 +47,11 @@ setup_outbound() {
         exit 1
     fi
 
-    # configure policy routing for each NIC
-    for ((i=1; i< NIC_COUNT; i++)); do
+    # configure policy routing
+    ip rule show | awk '/lookup 10[0-9]/ {print $0}' | while read -r rule; do
+        ip rule del ${rule#*: } || true
+    done
+    for ((i=1; i<NIC_COUNT; i++)); do
         NIC="${NICS[$i]}"
         TABLE_ID=$((i + 100))
 
@@ -53,8 +62,8 @@ setup_outbound() {
         log "Configuring NIC=$NIC IP=$IP_ADDR SUBNET=$SUBNET TABLE=$TABLE_ID"
 
         # ip route
-        ip route add "$SUBNET" dev "$NIC" scope link table "$TABLE_ID"
-        ip route add default via "$GATEWAY" dev "$NIC" table "$TABLE_ID"
+        ip route replace "$SUBNET" dev "$NIC" scope link table "$TABLE_ID"
+        ip route replace default via "$GATEWAY" dev "$NIC" table "$TABLE_ID"
 
         # ip rule
         ip rule add from "$IP_ADDR" table "$TABLE_ID"
@@ -62,7 +71,7 @@ setup_outbound() {
 
     # configure endpoints
     ip mptcp endpoint flush
-    for ((i=0; i< NIC_COUNT; i++)); do
+    for ((i=0; i<NIC_COUNT; i++)); do
         NIC="${NICS[$i]}"
         ID=$((i + 1))
         IP_ADDR=$(get_ip "$NIC")
@@ -75,6 +84,10 @@ setup_outbound() {
     ip mptcp limits set add_addr_accepted "$NIC_COUNT"
     log "outbound setup complete"
 }
+
+# Main
+
+check_mptcp_support
 
 # setup mptcp direction
 if [ "${MPTCP_DIRECTION:-}" = "out" ]; then

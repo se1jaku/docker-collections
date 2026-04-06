@@ -4,6 +4,8 @@ FROM ghcr.io/se1jaku/realm:v2.9.3
 RUN apk upgrade --no-cache && \
     apk add --no-cache bash iproute2 mptcpize
 
+COPY entrypoint.sh /usr/local/bin/
+
 ENV MPTCP_DIRECTION=
 
 ENTRYPOINT ["entrypoint.sh"]

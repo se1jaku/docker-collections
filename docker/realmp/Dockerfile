@@ -7,4 +7,4 @@ RUN apk upgrade --no-cache && \
 ENV MPTCP_DIRECTION=
 
 ENTRYPOINT ["entrypoint.sh"]
-CMD ["-c", "/etc/realm/config.yml"]
+CMD ["-c", "/etc/realm/config.toml"]

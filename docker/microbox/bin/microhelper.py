@@ -41,7 +41,6 @@ def restart_singbox():
         capture_output=True,
         text=True,
     )
-
     if result.returncode != 0:
         print("ERROR: failed to restart sing-box", file=sys.stderr)
         print(result.stderr, file=sys.stderr)
@@ -131,7 +130,6 @@ def update(restart=False):
         print("Configuration updated successfully.")
 
     if restart:
-        print("Restarting sing-box...")
         restart_singbox()
 
 

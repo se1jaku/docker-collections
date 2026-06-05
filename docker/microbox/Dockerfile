@@ -7,7 +7,7 @@ ENV TZ=Etc/UTC
 
 RUN apk upgrade --no-cache \
     && apk add --no-cache bash tzdata ca-certificates nftables \
-    curl jq bind-tools iproute2 supervisor \
+    curl jq bind-tools iproute2 supervisor py3-requests \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone
 

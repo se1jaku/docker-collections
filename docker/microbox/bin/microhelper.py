@@ -55,8 +55,9 @@ def self_update():
 
     script_url = "{}/{}".format(repository_url.rstrip("/"), REMOTE_SCRIPT_PATH)
     current_script = os.path.realpath(__file__)
+    current_dir = os.path.dirname(current_script)
 
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(prefix="microhelper_", dir=current_dir, delete=False) as tmp:
         tmp_path = tmp.name
 
     try:

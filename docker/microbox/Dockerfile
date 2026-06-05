@@ -17,6 +17,7 @@ COPY entrypoint.sh /usr/local/bin/
 COPY service.ini /etc/supervisor.d/
 
 ENV BACKUP_DIR=/backup
+ENV REPOSITORY_URL=https://raw.githubusercontent.com/se1jaku/docker-collections/main
 
 ENV SINGBOX_REMOTE_URL=
 ENV SINGBOX_CONFIG_DIR=/etc/sing-box

@@ -33,9 +33,9 @@ if [ ! -f "${FIRST_RUN}" ]; then
     mkdir -p ${BACKUP_DIR}
 
     # cron microhelper self-update at 0 3 * * 1
-    echo -e "0\t3\t*\t*\t1\tmicrohelper.py update" >> $CRON_ROOT_FILE
+    echo -e "0\t3\t*\t*\t1\tmicrohelper.py self-update" >> $CRON_ROOT_FILE
     # cron microhelper update at 0 4 * * 1
-    echo -e "0\t4\t*\t*\t1\tmicrohelper.py update" >> $CRON_ROOT_FILE
+    echo -e "0\t4\t*\t*\t1\tmicrohelper.py update --restart" >> $CRON_ROOT_FILE
 
     # touch first run file
     touch ${FIRST_RUN}

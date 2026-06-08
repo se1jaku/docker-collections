@@ -42,6 +42,7 @@ ENV CRONTAB_OPTIONS="-d 5"
 RUN apk upgrade --no-cache \
     && apk add --no-cache bash tzdata ca-certificates wget curl jq \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
-    && echo $TZ > /etc/timezone
+    && echo $TZ > /etc/timezone \
+    && mkdir -p /etc/cont-init.d /etc/cont-finish.d
 
 ENTRYPOINT ["/init"]

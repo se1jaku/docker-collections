@@ -15,6 +15,9 @@ on:
     paths:
       - "docker/supervisor/**"
 
+  schedule:
+    - cron: "0 2 * * 0"
+
   workflow_dispatch:
     inputs:
       tag:
@@ -36,21 +39,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Extract version from Dockerfile
-        id: version
-        run: |
-          LINE=$(grep -A1 '# @version' docker/${DOCKERFILE_DIR}/Dockerfile | tail -n1)
-          echo "Matched line: $LINE"
-
-          VERSION=$(echo "$LINE" | sed -E 's/^FROM [^:]+:([^ ]+).*/\1/')
-          if [ -z "$VERSION" ]; then
-            echo "Could not extract version from Dockerfile"
-            exit 1
-          fi
-
-          echo "base_version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Found version: $VERSION"
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -67,13 +55,13 @@ jobs:
       - name: Compute Docker tags
         id: docker_tags
         run: |
-          BASE_VERSION="${{ steps.version.outputs.base_version }}"
+          DATE_VERSION=$(date -u +%Y%m%d)
           INPUT_TAG="${{ inputs.tag || github.ref_name }}"
 
           if [[ "${GITHUB_REF_NAME}" == "master" || "${GITHUB_REF_NAME}" == "main" ]]; then
-            TAGS="type=raw,value=latest\ntype=raw,value=${INPUT_TAG}\ntype=raw,value=${BASE_VERSION}"
+            TAGS="type=raw,value=latest\ntype=raw,value=${INPUT_TAG}\ntype=raw,value=${DATE_VERSION}"
           elif [[ "${INPUT_TAG}" == "latest" ]]; then
-            TAGS="type=raw,value=latest\ntype=raw,value=${BASE_VERSION}"
+            TAGS="type=raw,value=latest\ntype=raw,value=${DATE_VERSION}"
           else
             TAGS="type=raw,value=${INPUT_TAG}"
           fi

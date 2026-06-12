@@ -219,11 +219,12 @@ class ResourceManager:
             res["_content_path"] = res_path if res["_exist"] else None
             res["_content_path_is_temp"] = False if res["_exist"] else None
             target = Path(res["target"]) if res["target"] else None
-            if target and target.is_dir:
+            if target and target.exists() and target.is_dir:
                 target = target / res["filename"]
             res["_target_path"] = target
 
     def print_status(self):
+        self.load_status()
         for res in self.meta["resources"]:
             pprint(res)
 
@@ -247,7 +248,7 @@ class ResourceManager:
                     print(f"[resource-manager] overwriting file at {target} ...")
                 else:
                     print(f"[resource-manager] creating file at {target} ...")
-                shutil.copy2(res["_content_path"], res["_target_path"])
+                shutil.copy2(res["_content_path"], target)
             if res["_content_path_is_temp"]:
                 res["_content_path"].unlink(missing_ok=True)
 

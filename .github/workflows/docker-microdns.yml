@@ -1,19 +1,19 @@
-name: Docker CI for alpine-s6
+name: Docker CI for microdns
 
 env:
-  IMAGE_NAME: alpine-s6
-  DOCKERFILE_DIR: alpine-s6
+  IMAGE_NAME: microdns
+  DOCKERFILE_DIR: microdns
 
 on:
   push:
     branches: ["main"]
     paths:
-      - "docker/alpine-s6/**"
+      - "docker/microdns/**"
 
   pull_request:
     branches: ["main"]
     paths:
-      - "docker/alpine-s6/**"
+      - "docker/microdns/**"
 
   workflow_dispatch:
     inputs:
@@ -36,13 +36,28 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pexpect requests jinja2
+
+      - name: Run resource manager
+        working-directory: ./docker
+        run: |
+          ./scripts/resource-manager.py ./$DOCKERFILE_DIR/res download
+
       - name: Extract version from Dockerfile
         id: version
         run: |
           LINE=$(grep -A1 '# @version' docker/${DOCKERFILE_DIR}/Dockerfile | tail -n1)
           echo "Matched line: $LINE"
 
-          VERSION=$(echo "$LINE" | sed -E 's/^ARG [0-9A-Za-z_]+=([^ ]+).*/\1/')
+          VERSION=$(echo "$LINE" | sed -E 's/^FROM [^:]+:([^ ]+).*/\1/')
           if [ -z "$VERSION" ]; then
             echo "Could not extract version from Dockerfile"
             exit 1

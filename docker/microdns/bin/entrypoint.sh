@@ -24,7 +24,7 @@ if [ ! -f "${FIRST_RUN}" ]; then
         resource-manager.py ${ENCRYPTION_DIR} render
 
         # cron resource manager sync at 0 4 * * *
-        echo -e "0\t4\t*\t*\t1\tresource-manager.py ${RESOURCE_DIR} sync && supervisorctl restart smartdns" >> $CRON_ROOT_FILE
+        echo -e "0\t4\t*\t*\t*\tresource-manager.py ${RESOURCE_DIR} sync && supervisorctl restart smartdns" >> $CRON_ROOT_FILE
     fi
 
     # touch first run file

@@ -14,3 +14,4 @@ COPY res/ /res/
 COPY enc/ /enc/
 
 ENTRYPOINT ["entrypoint.sh"]
+CMD ["supervisord", "-c", "/etc/supervisord.conf"]

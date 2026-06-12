@@ -19,6 +19,7 @@ logging.basicConfig(
     format="[%(name)s][%(levelname)s] %(message)s",
 )
 LOGGER = logging.getLogger("resource-manager")
+_, FILE_NAME = os.path.split(__file__)
 
 
 def check_executable_exist(executable: str):
@@ -39,7 +40,7 @@ def rage_decrypt(src: str, dst: str, passphrase: str) -> int:
     )
 
     while True:
-        idx = child.expect([r"Type passphrase.*",pexpect.EOF])
+        idx = child.expect([r"Type passphrase.*", pexpect.EOF])
         if idx == 0:
             child.sendline(passphrase)
         else:
@@ -52,6 +53,10 @@ def rage_decrypt(src: str, dst: str, passphrase: str) -> int:
 
 
 class ResourceManager:
+    SELF_UPDATE_URL = (
+        "https://raw.githubusercontent.com/se1jaku/docker-collections/main"
+        + f"/docker/scripts/{FILE_NAME}"
+    )
     META_FILENAME = ".meta.json"
     DEFAULT_ENCRYPTION_HANDLER = "rage"
     ENV_PREFIX = "RESOURCE"
@@ -84,9 +89,24 @@ class ResourceManager:
         with open(output_file, "wb") as f:
             f.write(response.content)
 
+    @classmethod
+    def download_content(cls, url: str):
+        cls.logger.info(f"requesting {url} ...")
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+
+        return response.content
+
+    @classmethod
+    def self_update(cls):
+        content = cls.download_content(cls.SELF_UPDATE_URL)
+        with open(__file__, "wb") as f:
+            f.write(content)
+        cls.logger.info("self update finished!")
+
     def resolve_update_config(self, update_config: dict, filename=None):
         if update_config.get("url"):
-            return update_config
+            return
 
         base_url = update_config.get("base_url") or self.base_url
         base_path = update_config.get("base_path") or self.base_path
@@ -101,19 +121,19 @@ class ResourceManager:
 
         url = f"{base_url.rstrip('/')}/{base_path.rstrip('/')}/{filename}"
 
-        return {
-            "base_url": base_url,
-            "base_path": base_path,
-            "filename": filename,
-            "url": url,
-        }
+        update_config["base_url"] = base_url
+        update_config["base_path"] = base_path
+        update_config["filename"] = filename
+        update_config["url"] = url
 
     def resolve_encryption_config(self, encryption_config: dict, filename=None):
         handler = encryption_config.get("handler", self.DEFAULT_ENCRYPTION_HANDLER)
         if not check_executable_exist(handler):
             raise FileNotFoundError(f"Error finding executable {handler}")
         if handler == "rage":
-            encryption_config["passphrase"] = encryption_config.get('passphrase') or os.getenv("RAGE_PASSPHRASE")
+            encryption_config["passphrase"] = encryption_config.get("passphrase") or os.getenv(
+                "RAGE_PASSPHRASE"
+            )
             if not encryption_config["passphrase"]:
                 raise ValueError(f"missing passphrase in {encryption_config}")
 
@@ -123,8 +143,9 @@ class ResourceManager:
 
     def resolve_resource(self, resource: dict):
         ix = resource.get("_index")
+        resource["_selected"] = True
         resource["targets"] = resource.get("targets", [])
-        
+
         # filename
         filename = resource.get("filename")
         if not filename:
@@ -145,9 +166,9 @@ class ResourceManager:
             self.resolve_template_config(resource["template_config"], filename=filename)
 
     def resolve_meta(self):
+        self.meta["update_config"] = self.meta.get("update_config", {})
         try:
-            self.meta["update_config"] = self.resolve_update_config(
-                self.meta["update_config"], filename=self.META_FILENAME)
+            self.resolve_update_config(self.meta["update_config"], filename=self.META_FILENAME)
         except ValueError as e:
             raise ValueError(f"Error resolving meta update config: {e}")
 
@@ -176,8 +197,8 @@ class ResourceManager:
     def handle_decrypt(self, encryption_config, src, dst=None):
         is_tempfile = False
         handler = encryption_config["handler"]
-        if src.name.endswith('.age'):
-            dst = src.parent / src.name.removesuffix('.age')
+        if src.name.endswith(".age"):
+            dst = src.parent / src.name.removesuffix(".age")
         if dst is None:
             with tempfile.NamedTemporaryFile(delete=False) as f:
                 dst = Path(f.name)
@@ -190,7 +211,9 @@ class ResourceManager:
         return dst, is_tempfile
 
     def handle_render(self, template_config, src, dst=None):
-        env = jinja2.Environment(trim_blocks=True, lstrip_blocks=True, undefined=jinja2.StrictUndefined)
+        env = jinja2.Environment(
+            trim_blocks=True, lstrip_blocks=True, undefined=jinja2.StrictUndefined
+        )
         tmpl = env.from_string(src.read_text())
         params = template_config["params"]
         if template_config["use_env"]:
@@ -208,7 +231,7 @@ class ResourceManager:
 
         content = tmpl.render(**params)
         if dst is None:
-            with tempfile.NamedTemporaryFile('w', encoding="utf-8" ,delete=False) as f:
+            with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as f:
                 dst = Path(f.name)
                 f.write(content)
         return dst, True
@@ -230,11 +253,22 @@ class ResourceManager:
                 self.download_file(res["update_config"]["url"], res_path)
                 self.logger.info(f"{res['filename']} downloaded")
 
+    def update_meta(self):
+        content = self.download_content(self.meta["update_config"]["url"])
+        with open(self.meta_file, "wb") as f:
+            f.write(content)
+        self.logger.info(f"meta file updated: {self.meta_file}")
+
     def update(self):
         for res in self.meta["resources"]:
             if res["update_enabled"]:
                 self.download_file(res["update_config"]["url"], self.directory / res["filename"])
                 self.logger.info(f"{res['filename']} updated")
+
+    def select_update(self):
+        for res in self.meta["resources"]:
+            if not res["update_enabled"]:
+                res["_selected"] = False
 
     def load_status(self):
         for res in self.meta["resources"]:
@@ -257,20 +291,10 @@ class ResourceManager:
         for res in self.meta["resources"]:
             pprint(res)
 
-    def decrypt(self):
+    def generate(self):
         for res in self.meta["resources"]:
-            if res["encryption_enabled"] and res["_content_path"]:
-                fp, is_temp = self.handle_decrypt(res["encryption_config"], res["_content_path"])
-                self.switch_content(res, fp, is_temp)
-
-    def render(self):
-        for res in self.meta["resources"]:
-            if res["template_enabled"] and res["_content_path"]:
-                fp, is_temp = self.handle_render(res["template_config"], res["_content_path"])
-                self.switch_content(res, fp, is_temp)
-
-    def output(self):
-        for res in self.meta["resources"]:
+            if not res["_selected"]:
+                continue
             for target in res["_target_path_list"]:
                 if target and res["_content_path"]:
                     if target.exists():
@@ -278,6 +302,18 @@ class ResourceManager:
                     else:
                         self.logger.info(f"creating file at {target} ...")
                     shutil.copy2(res["_content_path"], target)
+
+    def decrypt(self):
+        for res in self.meta["resources"]:
+            if res["_selected"] and res["encryption_enabled"] and res["_content_path"]:
+                fp, is_temp = self.handle_decrypt(res["encryption_config"], res["_content_path"])
+                self.switch_content(res, fp, is_temp)
+
+    def render(self):
+        for res in self.meta["resources"]:
+            if res["_selected"] and res["template_enabled"] and res["_content_path"]:
+                fp, is_temp = self.handle_render(res["template_config"], res["_content_path"])
+                self.switch_content(res, fp, is_temp)
 
     def cleanup(self):
         for res in self.meta["resources"]:
@@ -290,7 +326,7 @@ class ResourceManager:
 def usage():
     print(
         f"Usage: {Path(sys.argv[0]).name} <directory> "
-        "[print|delete|download|update|status|decrypt|render|all]"
+        "[print|self-update|delete|download|update-meta|update|status|decrypt|render|all]"
     )
 
 
@@ -306,13 +342,34 @@ def main():
 
     actions = {
         "print": [manager.print_config],
+        "self-update": [manager.self_update],
         "delete": [manager.delete],
         "download": [manager.download],
+        "update-meta": [manager.update_meta],
         "update": [manager.update],
         "status": [manager.print_status],
-        "decrypt": [manager.load_status, manager.decrypt, manager.output],
-        "render": [manager.load_status, manager.decrypt, manager.render, manager.output],
-        "all": [manager.update, manager.load_status, manager.decrypt, manager.render, manager.output],
+        "decrypt": [manager.load_status, manager.decrypt, manager.generate],
+        "render": [
+            manager.load_status,
+            manager.decrypt,
+            manager.render,
+            manager.generate,
+        ],
+        "sync": [
+            manager.update,
+            manager.select_update,
+            manager.load_status,
+            manager.decrypt,
+            manager.render,
+            manager.generate,
+        ],
+        "all": [
+            manager.update,
+            manager.load_status,
+            manager.decrypt,
+            manager.render,
+            manager.generate,
+        ],
     }
 
     funcs = actions.get(action)

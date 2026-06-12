@@ -6,7 +6,7 @@ import ipaddress
 
 
 def load_home_cidr():
-    home_cidr = os.getenv('HOME_CIDR')
+    home_cidr = os.getenv("HOME_CIDR")
     if not home_cidr:
         return
 
@@ -16,30 +16,25 @@ def load_home_cidr():
 
     smartdns_client_cidrs = []
     smartdns_client_cidrs.append(str(ipaddress.IPv4Network((int(net.network_address), 24))))
-    smartdns_client_cidrs.append(str(ipaddress.IPv4Network((int(net.network_address) + 256 * 2, 23))))
+    smartdns_client_cidrs.append(
+        str(ipaddress.IPv4Network((int(net.network_address) + 256 * 2, 23)))
+    )
     return {
         "smartdns_client_cidrs": smartdns_client_cidrs,
-        "smartdns_server_groups": {
-            "domestic": {
-                "servers": [
-                    "172.21.21.1"
-                ],
-                "tags": [
-                    "domestic"
-                ]
-            }
-        }
+        "smartdns_server_groups": {"domestic": {"servers": ["172.21.21.1"], "tags": ["domestic"]}},
     }
 
+
 def load_env():
-    client_cidrs_str = os.getenv('SMARTDNS_CLIENT_CIDRS')
-    client_cidrs = client_cidrs_str.split(',') if client_cidrs_str else []
-    server_groups_str = os.getenv('SMARTDNS_SERVER_GROUPS')
+    client_cidrs_str = os.getenv("SMARTDNS_CLIENT_CIDRS")
+    client_cidrs = client_cidrs_str.split(",") if client_cidrs_str else []
+    server_groups_str = os.getenv("SMARTDNS_SERVER_GROUPS")
     server_groups = json.loads(server_groups_str) if server_groups_str else {}
     return {
         "smartdns_client_cidrs": client_cidrs,
         "smartdns_server_groups": server_groups,
     }
+
 
 def main():
     result = {}

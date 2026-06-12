@@ -16,11 +16,15 @@ if [ ! -f "${FIRST_RUN}" ]; then
     if [ -n "${RAGE_PASSPHRASE:-}" ]; then
         echo "[entrypoint] RAGE_PASSPHRASE found!"
 
+        # resource manager
         echo "[entrypoint] rendering resources at ${RESOURCE_DIR} ..."
         resource-manager.py ${RESOURCE_DIR} render
 
         echo "[entrypoint] rendering resources at ${ENCRYPTION_DIR} ..."
         resource-manager.py ${ENCRYPTION_DIR} render
+
+        # cron resource manager sync at 0 4 * * *
+        echo -e "0\t4\t*\t*\t1\tresource-manager.py ${RESOURCE_DIR} sync && supervisorctl restart smartdns" >> $CRON_ROOT_FILE
     fi
 
     # touch first run file

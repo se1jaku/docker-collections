@@ -6,7 +6,7 @@
   "resources": [
     {
       "filename": "smartdns.conf.age",
-      "update_enabled": true,
+      "update_enabled": false,
       "update_config": {},
       "encryption_enabled": true,
       "encryption_config": {
@@ -24,7 +24,7 @@
     },
     {
       "filename": "server-list.conf.age",
-      "update_enabled": true,
+      "update_enabled": false,
       "update_config": {},
       "encryption_enabled": true,
       "encryption_config": {
@@ -42,7 +42,7 @@
     },
     {
       "filename": "client-domestic.conf.age",
-      "update_enabled": true,
+      "update_enabled": false,
       "update_config": {},
       "encryption_enabled": true,
       "encryption_config": {

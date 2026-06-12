@@ -120,6 +120,7 @@ class ResourceManager:
         with open(self.meta_file, "r", encoding="utf-8") as f:
             self.meta = json.load(f)
 
+        self._tmpl_env = None
         self.base_url = self.meta.get("base_url")
         self.base_path = self.meta.get("base_path")
 
@@ -151,8 +152,21 @@ class ResourceManager:
             f.write(content)
         cls.logger.info("self update finished!")
 
+    @property
+    def tmpl_env(self):
+        if self._tmpl_env:
+            return self._tmpl_env
+        self._tmpl_env = jinja2.Environment(
+            trim_blocks=True, lstrip_blocks=True, undefined=jinja2.StrictUndefined
+        )
+        self._tmpl_env.globals["env"] = lambda name, default=None: os.getenv(name, default)
+        return self._tmpl_env
+
     def resolve_update_config(self, update_config: dict, filename=None):
         if update_config.get("url"):
+            update_config["url"] = self.tmpl_env.from_string(update_config["url"]).render()
+            if not update_config["url"].startswith(("http://", "https://")):
+                raise ValueError(f"invalid url format: {update_config['url']}")
             return
 
         base_url = update_config.get("base_url") or self.base_url
@@ -306,10 +320,7 @@ class ResourceManager:
         return dst, is_tempfile
 
     def handle_render(self, template_config, src, dst=None):
-        env = jinja2.Environment(
-            trim_blocks=True, lstrip_blocks=True, undefined=jinja2.StrictUndefined
-        )
-        tmpl = env.from_string(src.read_text())
+        tmpl = self.tmpl_env.from_string(src.read_text())
         params = template_config["params"]
         if template_config["use_env"]:
             params.update(os.environ)
@@ -429,69 +440,84 @@ class ResourceManager:
 
 
 def usage():
+    print(f"Usage: {Path(sys.argv[0]).name}")
+    print("\t[self-update]")
     print(
-        f"Usage: {Path(sys.argv[0]).name} <directory> "
-        "[print|self-update|delete|download|update-meta|update|status|decrypt|render|all]"
+        "\t<directory> [print|delete|download|update-meta|update|status|encrypt|decrypt|render|all]"
     )
 
 
 def main():
-    if len(sys.argv) != 3:
-        usage()
-        sys.exit(1)
+    if len(sys.argv) == 2:
+        action = sys.argv[1]
 
-    directory = sys.argv[1]
-    action = sys.argv[2]
+        actions = {
+            "self-update": [ResourceManager.self_update],
+        }
 
-    manager = ResourceManager(directory)
+        funcs = actions.get(action)
+        if not funcs:
+            usage()
+            sys.exit(1)
 
-    actions = {
-        "print": [manager.print_config],
-        "self-update": [manager.self_update],
-        "delete": [manager.delete],
-        "download": [manager.download],
-        "update-meta": [manager.update_meta],
-        "update": [manager.update],
-        "status": [manager.print_status],
-        "encrypt": [manager.load_status, manager.encrypt, manager.generate],
-        "decrypt": [manager.load_status, manager.decrypt, manager.generate],
-        "render": [
-            manager.load_status,
-            manager.encrypt,
-            manager.decrypt,
-            manager.render,
-            manager.generate,
-        ],
-        "sync": [
-            manager.update,
-            manager.select_update,
-            manager.load_status,
-            manager.encrypt,
-            manager.decrypt,
-            manager.render,
-            manager.generate,
-        ],
-        "all": [
-            manager.update,
-            manager.load_status,
-            manager.encrypt,
-            manager.decrypt,
-            manager.render,
-            manager.generate,
-        ],
-    }
-
-    funcs = actions.get(action)
-
-    if not funcs:
-        usage()
-        sys.exit(1)
-
-    try:
         for func in funcs:
             func()
-    finally:
-        manager.cleanup()
+
+    elif len(sys.argv) == 3:
+        directory = sys.argv[1]
+        action = sys.argv[2]
+
+        manager = ResourceManager(directory)
+
+        actions = {
+            "print": [manager.print_config],
+            "delete": [manager.delete],
+            "download": [manager.download],
+            "update-meta": [manager.update_meta],
+            "update": [manager.update],
+            "status": [manager.print_status],
+            "encrypt": [manager.load_status, manager.encrypt, manager.generate],
+            "decrypt": [manager.load_status, manager.decrypt, manager.generate],
+            "render": [
+                manager.load_status,
+                manager.encrypt,
+                manager.decrypt,
+                manager.render,
+                manager.generate,
+            ],
+            "sync": [
+                manager.update,
+                manager.select_update,
+                manager.load_status,
+                manager.encrypt,
+                manager.decrypt,
+                manager.render,
+                manager.generate,
+            ],
+            "all": [
+                manager.update,
+                manager.load_status,
+                manager.encrypt,
+                manager.decrypt,
+                manager.render,
+                manager.generate,
+            ],
+        }
+
+        funcs = actions.get(action)
+        if not funcs:
+            usage()
+            sys.exit(1)
+
+        try:
+            for func in funcs:
+                func()
+        finally:
+            manager.cleanup()
+
+    else:
+        usage()
+        sys.exit(1)
 
 
 if __name__ == "__main__":

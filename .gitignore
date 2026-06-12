@@ -1,2 +1,12 @@
 secret*
 .env
+
+docker/**/raw/*
+!docker/**/raw/.gitkeep
+
+docker/**/res/*
+!docker/**/res/.meta.json
+
+docker/**/enc/*
+!docker/**/enc/.meta.json
+!docker/**/enc/*.age

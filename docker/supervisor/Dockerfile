@@ -1,4 +1,3 @@
-# @version
 FROM python:3-alpine
 
 ENV TZ=Etc/UTC

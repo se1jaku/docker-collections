@@ -1,5 +1,6 @@
 secret*
 .env
+dist
 
 docker/**/raw/*
 !docker/**/raw/.gitkeep

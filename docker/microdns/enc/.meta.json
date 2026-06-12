@@ -1,0 +1,72 @@
+{
+  "base_url": "https://raw.githubusercontent.com/se1jaku/docker-collections/main",
+  "base_path": "docker/microdns/enc",
+  "update_enabled": true,
+  "update_config": {},
+  "resources": [
+    {
+      "filename": "smartdns.conf.age",
+      "update_enabled": true,
+      "update_config": {},
+      "encryption_enabled": true,
+      "encryption_config": {
+        "handler": "rage"
+      },
+      "template_enabled": true,
+      "template_config": {
+        "use_env": false,
+        "params_provider": "tmpl-params-provider.py",
+        "params": {}
+      },
+      "target": "/etc/smartdns/smartdns.conf"
+    },
+    {
+      "filename": "server-list.conf.age",
+      "update_enabled": true,
+      "update_config": {},
+      "encryption_enabled": true,
+      "encryption_config": {
+        "handler": "rage"
+      },
+      "template_enabled": true,
+      "template_config": {
+        "use_env": false,
+        "params_provider": "tmpl-params-provider.py",
+        "params": {}
+      },
+      "target": "/etc/smartdns/server-list.conf"
+    },
+    {
+      "filename": "client-domestic.conf.age",
+      "update_enabled": true,
+      "update_config": {},
+      "encryption_enabled": true,
+      "encryption_config": {
+        "handler": "rage"
+      },
+      "template_enabled": true,
+      "template_config": {
+        "use_env": false,
+        "params_provider": "tmpl-params-provider.py",
+        "params": {}
+      },
+      "target": "/etc/smartdns/client-domestic.conf"
+    },
+    {
+      "filename": "custom.china.domain.smartdns.conf.age",
+      "update_enabled": true,
+      "update_config": {},
+      "encryption_enabled": true,
+      "encryption_config": {
+        "handler": "rage"
+      },
+      "template_enabled": true,
+      "template_config": {
+        "use_env": false,
+        "params_provider": "tmpl-params-provider.py",
+        "params": {}
+      },
+      "target": "/etc/smartdns/custom.china.domain.smartdns.conf"
+    }
+  ]
+}

@@ -18,7 +18,9 @@
         "params_provider": "tmpl-params-provider.py",
         "params": {}
       },
-      "target": "/etc/smartdns/smartdns.conf"
+      "targets": [
+        "/etc/smartdns/smartdns.conf"
+      ]
     },
     {
       "filename": "server-list.conf.age",
@@ -34,7 +36,9 @@
         "params_provider": "tmpl-params-provider.py",
         "params": {}
       },
-      "target": "/etc/smartdns/server-list.conf"
+      "targets": [
+        "/etc/smartdns/server-list.conf"
+      ]
     },
     {
       "filename": "client-domestic.conf.age",
@@ -50,7 +54,9 @@
         "params_provider": "tmpl-params-provider.py",
         "params": {}
       },
-      "target": "/etc/smartdns/client-domestic.conf"
+      "targets": [
+        "/etc/smartdns/client-domestic.conf"
+      ]
     },
     {
       "filename": "custom.china.domain.smartdns.conf.age",
@@ -66,7 +72,9 @@
         "params_provider": "tmpl-params-provider.py",
         "params": {}
       },
-      "target": "/etc/smartdns/custom.china.domain.smartdns.conf"
+      "targets": [
+        "/etc/smartdns/custom.china.domain.smartdns.conf"
+      ]
     }
   ]
 }

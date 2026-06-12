@@ -112,7 +112,7 @@ class ResourceManager:
 
     def resolve_resource(self, resource: dict):
         ix = resource.get("_index")
-        resource["target"] = resource.get("target")
+        resource["targets"] = resource.get("targets", [])
         
         # filename
         filename = resource.get("filename")
@@ -218,10 +218,15 @@ class ResourceManager:
             res["_exist"] = res_path.exists()
             res["_content_path"] = res_path if res["_exist"] else None
             res["_content_path_is_temp"] = False if res["_exist"] else None
-            target = Path(res["target"]) if res["target"] else None
-            if target and target.exists() and target.is_dir:
-                target = target / res["filename"]
-            res["_target_path"] = target
+            targets = []
+            for target in res["targets"]:
+                if not target:
+                    continue
+                target = Path(target)
+                if target and target.exists() and target.is_dir():
+                    target = target / res["filename"]
+                targets.append(target)
+            res["_target_path_list"] = targets
 
     def print_status(self):
         self.load_status()
@@ -242,21 +247,26 @@ class ResourceManager:
 
     def output(self):
         for res in self.meta["resources"]:
-            target = res["_target_path"]
-            if target and res["_content_path"]:
-                if target.exists():
-                    print(f"[resource-manager] overwriting file at {target} ...")
-                else:
-                    print(f"[resource-manager] creating file at {target} ...")
-                shutil.copy2(res["_content_path"], target)
+            for target in res["_target_path_list"]:
+                if target and res["_content_path"]:
+                    if target.exists():
+                        print(f"[resource-manager] overwriting file at {target} ...")
+                    else:
+                        print(f"[resource-manager] creating file at {target} ...")
+                    shutil.copy2(res["_content_path"], target)
+
+    def cleanup(self):
+        for res in self.meta["resources"]:
             if res["_content_path_is_temp"]:
+                print(f"[resource-manager] cleanup temporary file at {res['_content_path']} ...")
                 res["_content_path"].unlink(missing_ok=True)
+                res["_content_path"] = None
 
 
 def usage():
     print(
         f"Usage: {Path(sys.argv[0]).name} <directory> "
-        "[print|download|update|decrypt|render]"
+        "[print|delete|download|update|status|decrypt|render|all]"
     )
 
 
@@ -278,6 +288,7 @@ def main():
         "status": [manager.print_status],
         "decrypt": [manager.load_status, manager.decrypt, manager.output],
         "render": [manager.load_status, manager.decrypt, manager.render, manager.output],
+        "all": [manager.update, manager.load_status, manager.decrypt, manager.render, manager.output],
     }
 
     funcs = actions.get(action)
@@ -286,8 +297,11 @@ def main():
         usage()
         sys.exit(1)
 
-    for func in funcs:
-        func()
+    try:
+        for func in funcs:
+            func()
+    finally:
+        manager.cleanup()
 
 
 if __name__ == "__main__":

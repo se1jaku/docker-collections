@@ -1,0 +1,64 @@
+{
+  "base_url": "https://raw.githubusercontent.com/se1jaku/docker-collections/main",
+  "base_path": "docker/microdns/res",
+  "update_enabled": true,
+  "update_config": {},
+  "resources": [
+    {
+      "filename": "apple.china.domain.smartdns.conf",
+      "update_enabled": true,
+      "update_config": {
+        "url": "https://raw.githubusercontent.com/se1jaku/dnsmasq-china-list-rules/rules-smartdns/apple.china.domain.smartdns.conf"
+      },
+      "encryption_enabled": false,
+      "encryption_config": {},
+      "template_enabled": false,
+      "template_config": {},
+      "targets": [
+        "/etc/smartdns"
+      ]
+    },
+    {
+      "filename": "google.china.domain.smartdns.conf",
+      "update_enabled": true,
+      "update_config": {
+        "url": "https://raw.githubusercontent.com/se1jaku/dnsmasq-china-list-rules/rules-smartdns/google.china.domain.smartdns.conf"
+      },
+      "encryption_enabled": false,
+      "encryption_config": {},
+      "template_enabled": false,
+      "template_config": {},
+      "targets": [
+        "/etc/smartdns"
+      ]
+    },
+    {
+      "filename": "accelerated-domains.china.domain.smartdns.conf",
+      "update_enabled": true,
+      "update_config": {
+        "url": "https://raw.githubusercontent.com/se1jaku/dnsmasq-china-list-rules/rules-smartdns/accelerated-domains.china.domain.smartdns.conf"
+      },
+      "encryption_enabled": false,
+      "encryption_config": {},
+      "template_enabled": false,
+      "template_config": {},
+      "targets": [
+        "/etc/smartdns"
+      ]
+    },
+    {
+      "filename": "anti-ad-for-smartdns.conf",
+      "update_enabled": true,
+      "update_config": {
+        "url": "https://anti-ad.net/anti-ad-for-smartdns.conf"
+      },
+      "encryption_enabled": false,
+      "encryption_config": {},
+      "template_enabled": false,
+      "template_config": {},
+      "targets": [
+        "/etc/smartdns"
+      ]
+    }
+  ]
+}

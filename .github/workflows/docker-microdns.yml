@@ -49,7 +49,7 @@ jobs:
       - name: Run resource manager
         working-directory: ./docker
         run: |
-          ./scripts/resource-manager.py ./$DOCKERFILE_DIR/res download
+          ./supervisor/bin/resource-manager.py ./$DOCKERFILE_DIR/res download
 
       - name: Extract version from Dockerfile
         id: version

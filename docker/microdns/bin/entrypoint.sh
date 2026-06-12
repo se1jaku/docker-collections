@@ -12,9 +12,9 @@ CRON_ROOT_FILE="/etc/crontabs/root"
 echo "[entrypoint] initializing ..."
 
 if [ ! -f "${FIRST_RUN}" ]; then
-    # when RAGE_PASSPHRASE is set
-    if [ -n "${RAGE_PASSPHRASE:-}" ]; then
-        echo "[entrypoint] RAGE_PASSPHRASE found!"
+    # when any kind of age secret is set
+    if [ -n "${AGE_PASSPHRASE:-}" || -n "${AGE_SECRET_KEY:-}" ]; then
+        echo "[entrypoint] age secret found!"
 
         # resource manager
         echo "[entrypoint] rendering resources at ${RESOURCE_DIR} ..."

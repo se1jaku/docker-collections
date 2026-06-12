@@ -3,7 +3,7 @@ secret*
 dist
 
 docker/**/raw/*
-!docker/**/raw/.gitkeep
+!docker/**/raw/.meta.json
 
 docker/**/res/*
 !docker/**/res/.meta.json

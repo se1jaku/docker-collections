@@ -26,9 +26,33 @@ def check_executable_exist(executable: str):
     return bool(shutil.which(executable))
 
 
-def rage_decrypt(src: str, dst: str, passphrase: str) -> int:
+# NOTE: age/rage
+
+
+def rage_encrypt_use_key(src: str, dst: str, public_key: str, passpharse=None):
+    LOGGER.info(f"rage encrypting using key {src} ...")
+
+    cmds = ["rage", "-e", "-r", public_key, "-o", dst, src]
+    try:
+        subprocess.run(cmds, capture_output=True, text=True, check=True)
+    except subprocess.CalledProcessError as e:
+        LOGGER.info(f"subprocess failed with exit code {e.returncode}, {e.stderr}")
+        raise
+
+
+def rage_encrypt(src: str, dst: str, public_key=None, passpharse=None):
+    if not passpharse and not public_key:
+        raise ValueError("missing passpharse or secret key")
+    if public_key:
+        rage_encrypt_use_key(src, dst, public_key, passpharse)
+    else:
+        # TODO:
+        raise NotImplementedError("rage encryption with passphrase")
+
+
+def rage_decrypt_use_passpharse(src: str, dst: str, passphrase: str) -> int:
     assert len(passphrase) > 0
-    LOGGER.info(f"rage decrypting {src} ...")
+    LOGGER.info(f"rage decrypting using passphrase {src} ...")
     env = os.environ.copy()
     env["PINENTRY_PROGRAM"] = ""
 
@@ -52,6 +76,26 @@ def rage_decrypt(src: str, dst: str, passphrase: str) -> int:
         raise ValueError(f"Error rage decrypt: {src}")
 
 
+def rage_decrypt_use_key(src: str, dst: str, secret_key_path: str, passpharse=None):
+    LOGGER.info(f"rage decrypting using key {src} ...")
+
+    cmds = ["rage", "-d", "-i", secret_key_path, "-o", dst, src]
+    try:
+        subprocess.run(cmds, capture_output=True, text=True, check=True)
+    except subprocess.CalledProcessError as e:
+        LOGGER.info(f"subprocess failed with exit code {e.returncode}, {e.stderr}")
+        raise
+
+
+def rage_decrypt(src: str, dst: str, secret_key_path=None, passpharse=None):
+    if not passpharse and not secret_key_path:
+        raise ValueError("missing passpharse or secret key")
+    if secret_key_path:
+        rage_decrypt_use_key(src, dst, secret_key_path, passpharse)
+    else:
+        rage_decrypt_use_passpharse(src, dst, passpharse)
+
+
 class ResourceManager:
     SELF_UPDATE_URL = (
         "https://raw.githubusercontent.com/se1jaku/docker-collections/main"
@@ -60,6 +104,9 @@ class ResourceManager:
     META_FILENAME = ".meta.json"
     DEFAULT_ENCRYPTION_HANDLER = "rage"
     ENV_PREFIX = "RESOURCE"
+    ENV_AGE_PASSPHRASE = "AGE_PASSPHRASE"
+    ENV_AGE_PUBLIC_KEY = "AGE_PUBLIC_KEY"
+    ENV_AGE_SECRET_KEY = "AGE_SECRET_KEY"
 
     logger = LOGGER
 
@@ -130,12 +177,29 @@ class ResourceManager:
         handler = encryption_config.get("handler", self.DEFAULT_ENCRYPTION_HANDLER)
         if not check_executable_exist(handler):
             raise FileNotFoundError(f"Error finding executable {handler}")
-        if handler == "rage":
+        if handler in {"age", "rage"}:
             encryption_config["passphrase"] = encryption_config.get("passphrase") or os.getenv(
-                "RAGE_PASSPHRASE"
+                self.ENV_AGE_PASSPHRASE
             )
-            if not encryption_config["passphrase"]:
-                raise ValueError(f"missing passphrase in {encryption_config}")
+            encryption_config["public_key"] = encryption_config.get("public_key") or os.getenv(
+                self.ENV_AGE_PUBLIC_KEY
+            )
+            if not encryption_config["passphrase"] and not encryption_config["public_key"]:
+                raise ValueError(f"missing secret in {encryption_config}")
+
+    def resolve_decryption_config(self, decryption_config: dict, filename=None):
+        handler = decryption_config.get("handler", self.DEFAULT_ENCRYPTION_HANDLER)
+        if not check_executable_exist(handler):
+            raise FileNotFoundError(f"Error finding executable {handler}")
+        if handler in {"age", "rage"}:
+            decryption_config["passphrase"] = decryption_config.get("passphrase") or os.getenv(
+                self.ENV_AGE_PASSPHRASE
+            )
+            decryption_config["secret_key"] = decryption_config.get("secret_key") or os.getenv(
+                self.ENV_AGE_SECRET_KEY
+            )
+            if not decryption_config["passphrase"] and not decryption_config["secret_key"]:
+                raise ValueError(f"missing secret in {decryption_config}")
 
     def resolve_template_config(self, template_config: dict, filename=None):
         template_config["use_env"] = template_config.get("use_env", False)
@@ -159,6 +223,11 @@ class ResourceManager:
         resource["encryption_config"] = resource.get("encryption_config", {})
         if resource["encryption_enabled"]:
             self.resolve_encryption_config(resource["encryption_config"], filename=filename)
+
+        resource["decryption_enabled"] = resource.get("decryption_enabled", False)
+        resource["decryption_config"] = resource.get("decryption_config", {})
+        if resource["decryption_enabled"]:
+            self.resolve_decryption_config(resource["decryption_config"], filename=filename)
 
         resource["template_enabled"] = resource.get("template_enabled", False)
         resource["template_config"] = resource.get("template_config", {})
@@ -194,9 +263,29 @@ class ResourceManager:
         resource["_content_path"] = filepath
         resource["_content_path_is_temp"] = is_temp
 
-    def handle_decrypt(self, encryption_config, src, dst=None):
+    def handle_encrypt(self, encryption_config, src, dst=None):
         is_tempfile = False
         handler = encryption_config["handler"]
+        if src.name.endswith(".age"):
+            raise ValueError("encrypt an already encrypted file")
+        if dst is None:
+            with tempfile.NamedTemporaryFile(delete=False) as f:
+                dst = Path(f.name)
+                is_tempfile = True
+
+        if handler == "age":
+            raise NotImplementedError("age decryption")
+        elif handler == "rage":
+            rage_encrypt(
+                str(src), str(dst), encryption_config["public_key"], encryption_config["passphrase"]
+            )
+        else:
+            raise ValueError(f"Error encrypting, unknown handler: {handler}")
+        return dst, is_tempfile
+
+    def handle_decrypt(self, decryption_config, src, dst=None):
+        is_tempfile = False
+        handler = decryption_config["handler"]
         if src.name.endswith(".age"):
             dst = src.parent / src.name.removesuffix(".age")
         if dst is None:
@@ -204,8 +293,16 @@ class ResourceManager:
                 dst = Path(f.name)
                 is_tempfile = True
 
-        if handler == "rage":
-            rage_decrypt(str(src), str(dst), encryption_config["passphrase"])
+        if handler == "age":
+            raise NotImplementedError("age decryption")
+        elif handler == "rage":
+            secret_key_path = None
+            if decryption_config["secret_key"]:
+                with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as f:
+                    secret_key_path = Path(f.name)
+                    f.write(decryption_config["secret_key"])
+            decryption_config["_secret_key_path"] = secret_key_path
+            rage_decrypt(str(src), str(dst), str(secret_key_path), decryption_config["passphrase"])
         else:
             raise ValueError(f"Error decrypting, unknown handler: {handler}")
         return dst, is_tempfile
@@ -303,10 +400,16 @@ class ResourceManager:
                         self.logger.info(f"creating file at {target} ...")
                     shutil.copy2(res["_content_path"], target)
 
-    def decrypt(self):
+    def encrypt(self):
         for res in self.meta["resources"]:
             if res["_selected"] and res["encryption_enabled"] and res["_content_path"]:
-                fp, is_temp = self.handle_decrypt(res["encryption_config"], res["_content_path"])
+                fp, is_temp = self.handle_encrypt(res["encryption_config"], res["_content_path"])
+                self.switch_content(res, fp, is_temp)
+
+    def decrypt(self):
+        for res in self.meta["resources"]:
+            if res["_selected"] and res["decryption_enabled"] and res["_content_path"]:
+                fp, is_temp = self.handle_decrypt(res["decryption_config"], res["_content_path"])
                 self.switch_content(res, fp, is_temp)
 
     def render(self):
@@ -321,6 +424,10 @@ class ResourceManager:
                 self.logger.info(f"cleanup temporary file at {res['_content_path']} ...")
                 res["_content_path"].unlink(missing_ok=True)
                 res["_content_path"] = None
+            if res["decryption_config"].get("_secret_key_path"):
+                secret_key_path = res["decryption_config"]["_secret_key_path"]
+                self.logger.info(f"cleanup temporary file at {secret_key_path} ...")
+                secret_key_path.unlink(missing_ok=True)
 
 
 def usage():
@@ -348,9 +455,11 @@ def main():
         "update-meta": [manager.update_meta],
         "update": [manager.update],
         "status": [manager.print_status],
+        "encrypt": [manager.load_status, manager.encrypt, manager.generate],
         "decrypt": [manager.load_status, manager.decrypt, manager.generate],
         "render": [
             manager.load_status,
+            manager.encrypt,
             manager.decrypt,
             manager.render,
             manager.generate,
@@ -359,6 +468,7 @@ def main():
             manager.update,
             manager.select_update,
             manager.load_status,
+            manager.encrypt,
             manager.decrypt,
             manager.render,
             manager.generate,
@@ -366,6 +476,7 @@ def main():
         "all": [
             manager.update,
             manager.load_status,
+            manager.encrypt,
             manager.decrypt,
             manager.render,
             manager.generate,

@@ -20,7 +20,6 @@ COPY etc/ /etc/
 COPY res/ /res/
 COPY enc/ /enc/
 
-ENV RAGE_PASSPHRASE=
 ENV RESOURCE_BASE_URL=https://raw.githubusercontent.com/se1jaku/docker-collections/main
 
 ENTRYPOINT ["entrypoint.sh"]

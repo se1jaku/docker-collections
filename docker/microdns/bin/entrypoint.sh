@@ -33,6 +33,8 @@ if [ ! -f "${FIRST_RUN}" ]; then
             resource-manager.py ${ENCRYPTION_DIR} render
         fi
 
+        # cron resource manager self-update at 0 2 * * *
+        echo -e "0\t2\t*\t*\t*\tresource-manager.py self-update" >> $CRON_ROOT_FILE
         # cron resource manager sync at 55 3 * * *
         echo -e "55\t3\t*\t*\t*\tresource-manager.py ${RESOURCE_DIR} sync" >> $CRON_ROOT_FILE
         # cron resource manager sync at 0 4 * * *

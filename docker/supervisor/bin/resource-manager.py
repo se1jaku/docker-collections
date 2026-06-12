@@ -113,14 +113,16 @@ class ResourceManager:
     def __init__(self, directory: str):
         self.directory = Path(directory).resolve()
         self.meta_file = self.directory / self.META_FILENAME
+        self._tmpl_env = None
 
         if not self.meta_file.exists():
             raise FileNotFoundError(f"meta file not found: {self.meta_file}")
 
         with open(self.meta_file, "r", encoding="utf-8") as f:
             self.meta = json.load(f)
+        self.init_meta()
 
-        self._tmpl_env = None
+    def init_meta(self):
         self.base_url = self.meta.get("base_url")
         self.base_path = self.meta.get("base_path")
 
@@ -365,6 +367,10 @@ class ResourceManager:
             f.write(content)
         self.logger.info(f"meta file updated: {self.meta_file}")
 
+        # reload
+        self.meta = json.loads(content.decode())
+        self.init_meta()
+
     def update(self):
         for res in self.meta["resources"]:
             if res["update_enabled"]:
@@ -486,6 +492,7 @@ def main():
                 manager.generate,
             ],
             "sync": [
+                manager.update_meta,
                 manager.update,
                 manager.select_update,
                 manager.load_status,

@@ -99,7 +99,7 @@ def rage_decrypt(src: str, dst: str, secret_key_path=None, passpharse=None):
 class ResourceManager:
     SELF_UPDATE_URL = (
         "https://raw.githubusercontent.com/se1jaku/docker-collections/main"
-        + f"/docker/scripts/{FILE_NAME}"
+        + f"/docker/supervisor/bin/{FILE_NAME}"
     )
     META_FILENAME = ".meta.json"
     DEFAULT_ENCRYPTION_HANDLER = "rage"

@@ -1,0 +1,18 @@
+{
+  "base_url": "https://raw.githubusercontent.com/se1jaku/docker-collections/main",
+  "base_path": "docker/microbox/res",
+  "update_enabled": true,
+  "update_config": {},
+  "resources": [
+    {
+      "filename": "config.json",
+      "update_enabled": true,
+      "update_config": {
+        "url": "{{ env('SINGBOX_REMOTE_URL') }}"
+      },
+      "targets": [
+        "/etc/sing-box/config.json"
+      ]
+    }
+  ]
+}

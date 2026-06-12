@@ -13,7 +13,7 @@ echo "[entrypoint] initializing ..."
 
 if [ ! -f "${FIRST_RUN}" ]; then
     # when any kind of age secret is set
-    if [ -n "${AGE_PASSPHRASE:-}" || -n "${AGE_SECRET_KEY:-}" ]; then
+    if [ -n "${AGE_PASSPHRASE:-}" ] || [ -n "${AGE_SECRET_KEY:-}" ]; then
         echo "[entrypoint] age secret found!"
 
         # resource manager

@@ -286,8 +286,6 @@ class ResourceManager:
     def handle_decrypt(self, decryption_config, src, dst=None):
         is_tempfile = False
         handler = decryption_config["handler"]
-        if src.name.endswith(".age"):
-            dst = src.parent / src.name.removesuffix(".age")
         if dst is None:
             with tempfile.NamedTemporaryFile(delete=False) as f:
                 dst = Path(f.name)

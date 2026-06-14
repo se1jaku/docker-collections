@@ -3,12 +3,14 @@
 import os
 import sys
 import json
+import time
 import shutil
 import logging
 import subprocess
 import tempfile
 from pprint import pprint
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pexpect
 import requests
@@ -96,19 +98,124 @@ def rage_decrypt(src: str, dst: str, secret_key_path=None, passpharse=None):
         rage_decrypt_use_passpharse(src, dst, passpharse)
 
 
+class ProxyManager:
+    ENV_PREFIX = "PROXY"
+
+    # Maximum time to wait for each connection attempt to a resolved server IP.
+    # The total elapsed time may be longer if multiple IP addresses are tried.
+    REQUESTS_CONNECT_TIMEOUT = 5
+    # Maximum time to wait for data on an established connection.
+    # This is not a limit on the total response time.
+    REQUESTS_READ_TIMEOUT = 10
+
+    RETRY_THRESHOLD = 3
+    RETRY_WAIT = 5
+    RETRY_MULTIPILER = 2
+    RETRY_STATUS_CODES = {
+        408,  # Request Timeout
+        425,  # Too Early
+        429,  # Too Many Requests
+        500,  # Internal Server Error
+        502,  # Bad Gateway
+        503,  # Service Unavailable
+        504,  # Gateway Timeout
+        520,  # Unknown Error (Cloudflare)
+        521,  # Web Server Is Down (Cloudflare)
+        522,  # Connection Timed Out (Cloudflare)
+        523,  # Origin Is Unreachable (Cloudflare)
+        524,  # A Timeout Occurred (Cloudflare)
+    }
+
+    logger = LOGGER.getChild("ProxyManager")
+
+    def __init__(self, prefix_proxies: list = None):
+        self.prefix_proxies = self.load_prefix_proxies(prefix_proxies)
+        self.proxy_map = {}
+        self._selected_proxy = None
+
+    def load_prefix_proxies(self, extra_proxies: list = None):
+        proxies = []
+        env_str = os.getenv(f"{self.ENV_PREFIX}_PREFIX_PROXIES")
+        if env_str:
+            for proxy in env_str.split(","):
+                if proxy.startswith(("https://", "http://")) and proxy not in proxies:
+                    self.logger.info(f"parsed prefix proxy from env: {proxy}")
+                    proxies.append(proxy)
+        return proxies
+
+    def add_prefix_proxies(self, *proxies):
+        for proxy in proxies:
+            if proxy.startswith(("https://", "http://")) and proxy not in self.prefix_proxies:
+                self.prefix_proxies.append(proxy)
+
+    def yield_proxies(self):
+        yield from self.prefix_proxies
+
+    def get(self, url):
+        parsed = urlparse(url)
+        if parsed.hostname in self.proxy_map:
+            final_url = f"{self.proxy_map[parsed.hostname].rstrip('/')}/{url}"
+            self.logger.info(f"requesting {final_url} ...")
+            response = requests.get(
+                final_url, timeout=(self.REQUESTS_CONNECT_TIMEOUT, self.REQUESTS_READ_TIMEOUT)
+            )
+            return response
+
+        retry_count = 0
+        retry_wait = self.RETRY_WAIT
+        proxy_candidicates = self.yield_proxies()
+        proxy = None
+        while retry_count < self.RETRY_THRESHOLD:
+            final_url = f"{proxy.rstrip('/')}/{url}" if proxy else url
+            self.logger.info(f"requesting {final_url} ...")
+
+            try:
+                response = requests.get(
+                    final_url,
+                    timeout=(self.REQUESTS_CONNECT_TIMEOUT, self.REQUESTS_READ_TIMEOUT),
+                )
+            except KeyboardInterrupt:
+                raise
+            except requests.exceptions.Timeout:
+                proxy = next(proxy_candidicates, None)
+                if proxy is None:
+                    raise
+                else:
+                    self.logger.info(f"got timeout for url {url}, next proxy is {proxy}")
+            else:
+                if 200 <= response.status_code < 300:
+                    if proxy:
+                        self.proxy_map[parsed.hostname] = proxy
+                    return response
+                elif response.status_code in self.RETRY_STATUS_CODES:
+                    self.logger.warning(
+                        f"got status code {response.status_code} for url {url}, "
+                        f"retry count is {retry_count}, wait for {retry_wait} ..."
+                    )
+                    time.sleep(retry_wait)
+                else:
+                    response.raise_for_status()
+                    raise ValueError(f"unexpected status code {response.status_code} for url {url}")
+            finally:
+                retry_count += 1
+                retry_wait *= self.RETRY_MULTIPILER
+
+
 class ResourceManager:
     SELF_UPDATE_URL = (
         "https://raw.githubusercontent.com/se1jaku/docker-collections/main"
-        + f"/docker/supervisor/bin/{FILE_NAME}"
+        f"/docker/supervisor/bin/{FILE_NAME}"
     )
     META_FILENAME = ".meta.json"
     DEFAULT_ENCRYPTION_HANDLER = "rage"
+
     ENV_PREFIX = "RESOURCE"
     ENV_AGE_PASSPHRASE = "AGE_PASSPHRASE"
     ENV_AGE_PUBLIC_KEY = "AGE_PUBLIC_KEY"
     ENV_AGE_SECRET_KEY = "AGE_SECRET_KEY"
 
-    logger = LOGGER
+    logger = LOGGER.getChild("ResourceManager")
+    proxy_manager = ProxyManager()
 
     def __init__(self, directory: str):
         self.directory = Path(directory).resolve()
@@ -131,21 +238,15 @@ class ResourceManager:
         self.logger.info(f"initialized at directory: {self.directory}")
 
     @classmethod
-    def download_file(cls, url: str, output_file: Path):
-        cls.logger.info(f"requesting {url} ...")
-        response = requests.get(url, timeout=30)
-        response.raise_for_status()
-
-        with open(output_file, "wb") as f:
-            f.write(response.content)
+    def download_content(cls, url: str):
+        response = cls.proxy_manager.get(url)
+        return response.content
 
     @classmethod
-    def download_content(cls, url: str):
-        cls.logger.info(f"requesting {url} ...")
-        response = requests.get(url, timeout=30)
-        response.raise_for_status()
-
-        return response.content
+    def download_file(cls, url: str, output_file: Path):
+        response = cls.proxy_manager.get(url)
+        with open(output_file, "wb") as f:
+            f.write(response.content)
 
     @classmethod
     def self_update(cls):
@@ -158,10 +259,20 @@ class ResourceManager:
     def tmpl_env(self):
         if self._tmpl_env:
             return self._tmpl_env
+
+        def _func_env(name, default=None):
+            env = os.getenv(name)
+            if env is not None:
+                return env
+            if default:
+                return default
+            raise jinja2.UndefinedError(f"environment variable {name} is not defined!")
+
         self._tmpl_env = jinja2.Environment(
             trim_blocks=True, lstrip_blocks=True, undefined=jinja2.StrictUndefined
         )
-        self._tmpl_env.globals["env"] = lambda name, default=None: os.getenv(name, default)
+
+        self._tmpl_env.globals["env"] = _func_env
         return self._tmpl_env
 
     def resolve_update_config(self, update_config: dict, filename=None):
@@ -252,6 +363,10 @@ class ResourceManager:
 
     def resolve_meta(self):
         self.meta["update_config"] = self.meta.get("update_config", {})
+        self.meta["prefix_proxies"] = self.meta.get("prefix_proxies", [])
+        if self.meta["prefix_proxies"]:
+            self.proxy_manager.add_prefix_proxies(*self.meta["prefix_proxies"])
+
         try:
             self.resolve_update_config(self.meta["update_config"], filename=self.META_FILENAME)
         except ValueError as e:

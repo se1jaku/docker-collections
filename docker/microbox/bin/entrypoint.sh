@@ -27,7 +27,7 @@ if [ ! -f "${FIRST_RUN}" ]; then
     # sync config file
     if [ ! -f "${SINGBOX_CONFIG_FILE}" ]; then
         resource-manager.py ${RESOURCE_DIR} sync
-    else
+    fi
 
     # cron resource manager self-update at 0 2 * * *
     echo -e "0\t2\t*\t*\t*\tresource-manager.py self-update" >> $CRON_ROOT_FILE

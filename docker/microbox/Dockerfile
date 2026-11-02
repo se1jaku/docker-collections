@@ -1,5 +1,5 @@
 # @version
-FROM ghcr.io/sagernet/sing-box:v1.13.12 AS dumper
+FROM ghcr.io/sagernet/sing-box:v1.14.4 AS dumper
 
 FROM ghcr.io/se1jaku/supervisor:latest
 

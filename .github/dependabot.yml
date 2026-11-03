@@ -7,11 +7,6 @@ version: 2
 updates:
   # Maintain dependencies within Dockerfiles
   - package-ecosystem: docker
-    directory: docker/supervisor
-    schedule:
-      interval: daily
-
-  - package-ecosystem: docker
     directory: docker/microbox
     schedule:
       interval: daily
